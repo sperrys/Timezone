@@ -9,6 +9,7 @@
 
 
 #include <Wire.h>
+#include <Button.h>
 #include <TimeLib.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -22,6 +23,7 @@ const time_t EPOCH_GRAD = 1559174400;
 const time_t EPOCH_ANN = 1462233600;
 
 #define DISPLAY_ADDRESS   0x70
+#define BUTTON_PIN 2
 
 // Create Display Object
 Adafruit_7segment ClockDisplay = Adafruit_7segment();
@@ -53,8 +55,8 @@ void sendNTPpacket(IPAddress &address);
 
 void setup()
 {
-  pinMode(2,INPUT_PULLUP);
-  attachInterrupt(2, OnButtonPress, RISING);
+  //pinMode(2,INPUT_PULLUP);
+  //attachInterrupt(2, OnButtonPress, RISING);
 
   // WiFi.disconnect();
   Wire.begin(4,5);
@@ -81,15 +83,28 @@ void setup()
 time_t prevDisplay = 0; // when the digital clock was displayed
 volatile int mode = 1;
 
+Button myButton = Button(BUTTON_PIN, true, true, 30);
+
 void loop()
 {
   if (timeStatus() != timeNotSet) {
-    if (now() != prevDisplay) { //update the display only if time has changed    
-      prevDisplay = now();
-      CalcDisplay(mode);
-      ClockDisplay.writeDisplay();
+
+    myButton.read();
+    
+    if(myButton.wasReleased()) {
+      if(myButton.pressedFor(3000)) {
+        ResetClock();
+      }
+      else {
+        ChangeMode();
+      }
     }
-  }
+   }
+   else {
+      setSyncProvider(getNtpTime);
+   }
+   CalcDisplay(mode);
+   ClockDisplay.writeDisplay();
 }
 
 void CalcDisplay(int mode) {
@@ -181,9 +196,14 @@ time_t getNtpTime()
   return 0; // return 0 if unable to get the time
 }
 
-void OnButtonPress() {
+void ChangeMode() {
   Serial.print("Mode Changed");
-  mode = (mode + digitalRead(2)) % 3;
+  mode = (mode + 1) % 3;
+}
+
+void ResetClock() {
+  Serial.print("Reseting Clock");
+  ESP.reset();
 }
 
 // send an NTP request to the time server at the given address
