@@ -1,0 +1,14 @@
+.DS_Store
+
+venv/
+env/
+
+bin/*/
+*build-*
+*~
+build-tmp/
+Makefile
+doc/
+debug.txt
+.ycm_extra_conf.pyc
+.ropeproject
